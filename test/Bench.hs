@@ -15,7 +15,12 @@ import Network.FastIRC.Raw
 main :: IO ()
 main =
     defaultMain $
-    [ bgroup "Raw" [rawParser] ]
+    [ bgroup "raw" raw ]
 
     where
-    rawParser = bench "parse cmd" (nf parseMessage "COMMAND")
+    raw = [parseArgs, parseCmd, parseFull, parseSpc]
+        where
+        parseArgs = bench "parse_args" (nf parseMessage "COMMAND ARG ARG ARG :LAST ARG")
+        parseCmd  = bench "parse_cmd"  (nf parseMessage "COMMAND")
+        parseFull = bench "parse_full" (nf parseMessage ":PREFIX COMMAND ARG ARG ARG :LAST ARG")
+        parseSpc  = bench "parse_spc"  (nf parseMessage "C                                 ")

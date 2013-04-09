@@ -8,6 +8,7 @@ module Network.FastIRC.Raw
     ( -- * Raw protocol
       Message(..),
       -- * Parsing
+      ircLines,
       messageParser,
       parseMessage
     )
