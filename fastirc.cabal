@@ -1,0 +1,51 @@
+Name:          fastirc
+Version:       0.3.0
+Category:      Network
+Synopsis:      Fast IRC protocol implementation
+Maintainer:    Ertugrul Söylemez <es@ertes.de>
+Author:        Ertugrul Söylemez <es@ertes.de>
+Copyright:     (c) 2013 Ertugrul Söylemez
+License:       BSD3
+License-file:  LICENSE
+Build-type:    Simple
+Cabal-version: >= 1.10
+Description:
+    Fast IRC protocol implementation.
+
+Library
+    Build-depends:
+        base >= 4.5 && < 5
+    Default-language: Haskell2010
+    Default-extensions:
+    GHC-Options: -W
+    Exposed-modules:
+
+Test-suite tests
+    Type: exitcode-stdio-1.0
+    Build-depends:
+        base >= 4.5 && < 5,
+        fastirc,
+        HUnit,
+        QuickCheck,
+        test-framework,
+        test-framework-hunit,
+        test-framework-quickcheck2,
+        test-framework-th
+    Default-language: Haskell2010
+    Default-extensions:
+        TemplateHaskell
+    GHC-Options: -W -threaded -rtsopts -with-rtsopts=-N
+    Hs-source-dirs: test
+    Main-is: Props.hs
+
+Benchmark bench
+    Type: exitcode-stdio-1.0
+    Build-depends:
+        base >= 4.5 && < 5,
+        criterion,
+        fastirc
+    Default-language: Haskell2010
+    Default-extensions:
+    GHC-Options: -W -O2 -threaded -rtsopts -with-rtsopts=-N
+    Hs-source-dirs: test
+    Main-is: Bench.hs
