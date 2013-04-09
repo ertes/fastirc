@@ -9,8 +9,13 @@ License:       BSD3
 License-file:  LICENSE
 Build-type:    Simple
 Cabal-version: >= 1.10
+Extra-source-files: README.md
 Description:
     Fast IRC protocol implementation.
+
+Source-repository head
+    type:     git
+    location: git://github.com/ertes/continue.git
 
 Library
     Build-depends:
@@ -19,6 +24,7 @@ Library
     Default-extensions:
     GHC-Options: -W
     Exposed-modules:
+        Network.FastIRC
 
 Test-suite tests
     Type: exitcode-stdio-1.0
