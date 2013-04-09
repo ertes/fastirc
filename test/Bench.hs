@@ -9,7 +9,13 @@
 module Main where
 
 import Criterion.Main
+import Network.FastIRC.Raw
 
 
 main :: IO ()
-main = defaultMain []
+main =
+    defaultMain $
+    [ bgroup "Raw" [rawParser] ]
+
+    where
+    rawParser = bench "parse cmd" (nf parseMessage "COMMAND")

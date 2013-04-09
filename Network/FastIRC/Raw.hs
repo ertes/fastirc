@@ -8,12 +8,13 @@ module Network.FastIRC.Raw
     ( -- * Raw protocol
       Message(..),
       -- * Parsing
-      messageP
+      messageParser,
+      parseMessage
     )
     where
 
---import qualified Data.ByteString as B
 import Control.Applicative
+import Control.DeepSeq
 import Data.Attoparsec.ByteString as P
 import Data.ByteString (ByteString)
 import Data.Data
@@ -30,11 +31,15 @@ data Message =
     }
     deriving (Data, Eq, Ord, Read, Show, Typeable)
 
+instance NFData Message where
+    rnf (Message pfx cmd args) =
+        pfx `seq` cmd `seq` args `seq` ()
+
 
 -- | Parser for a raw protocol message.
 
-messageP :: Parser Message
-messageP =
+messageParser :: Parser Message
+messageParser =
     Message
     <$> (prefix <* space <|> pure Nothing)
     <*> command
@@ -59,3 +64,11 @@ messageP =
         where
         lastArg = word8 58 *> takeTill isLF
         regArg  = token
+
+
+-- | Parse the given message.
+
+parseMessage :: ByteString -> Maybe Message
+parseMessage =
+    either (const Nothing) Just .
+    parseOnly messageParser
