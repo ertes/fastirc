@@ -19,30 +19,39 @@ Source-repository head
 
 Library
     Build-depends:
-        base >= 4.5 && < 5
+        attoparsec >= 0.10 && < 1,
+        base       >= 4.5  && < 5,
+        bytestring >= 0.10 && < 1
     Default-language: Haskell2010
     Default-extensions:
+        DeriveDataTypeable
     GHC-Options: -W
     Exposed-modules:
         Network.FastIRC
+        Network.FastIRC.Raw
 
 Test-suite tests
     Type: exitcode-stdio-1.0
     Build-depends:
         base >= 4.5 && < 5,
+        attoparsec,
+        bytestring,
         fastirc,
-        HUnit,
         QuickCheck,
         test-framework,
-        test-framework-hunit,
         test-framework-quickcheck2,
         test-framework-th
     Default-language: Haskell2010
     Default-extensions:
+        OverloadedStrings
         TemplateHaskell
+        ViewPatterns
     GHC-Options: -W -threaded -rtsopts -with-rtsopts=-N
     Hs-source-dirs: test
     Main-is: Props.hs
+    Other-modules:
+        Props.Raw
+        Props.Types
 
 Benchmark bench
     Type: exitcode-stdio-1.0

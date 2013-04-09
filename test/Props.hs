@@ -8,12 +8,12 @@
 
 module Main where
 
---import Test.Framework
---import Test.Framework.Providers.HUnit
---import Test.Framework.Providers.QuickCheck2
-import Test.Framework.TH
---import Test.QuickCheck
+import Props.Raw
+import Test.Framework
 
 
 main :: IO ()
-main = $(defaultMainGenerator)
+main =
+    defaultMain $
+        rawTests :
+        []
