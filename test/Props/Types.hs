@@ -21,9 +21,9 @@ newtype ArgToken =
 instance Arbitrary ArgToken where
     arbitrary =
         fmap (ArgToken . B.pack) $
-             (:)
-             <$> choose (1, 255) `suchThat` notChar [10, 13, 32, 58]
-             <*> listOf (choose (1, 255) `suchThat` notChar [10, 13, 32])
+            (:)
+            <$> choose (1, 255) `suchThat` notChar [10, 13, 32, 58]
+            <*> listOf (choose (1, 255) `suchThat` notChar [10, 13, 32])
 
 
 newtype LastArgToken =
@@ -33,7 +33,17 @@ newtype LastArgToken =
 instance Arbitrary LastArgToken where
     arbitrary =
         fmap (LastArgToken . B.pack) . listOf $
-             choose (1, 255) `suchThat` notChar [10, 13]
+            choose (1, 255) `suchThat` notChar [10, 13]
+
+
+newtype LineToken =
+    LineToken { getLineToken :: ByteString }
+    deriving (Show)
+
+instance Arbitrary LineToken where
+    arbitrary =
+        fmap (LineToken . B.pack) . listOf1 $
+            choose (0, 255) `suchThat` notChar [10, 13]
 
 
 newtype NonToken =
