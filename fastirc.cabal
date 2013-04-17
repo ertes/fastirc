@@ -90,6 +90,6 @@ Benchmark bench
     Default-language: Haskell2010
     Default-extensions:
         OverloadedStrings
-    GHC-Options: -W -O2 -threaded -rtsopts -with-rtsopts=-N
+    GHC-Options: -W -threaded -rtsopts
     Hs-source-dirs: test
     Main-is: Bench.hs

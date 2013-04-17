@@ -9,6 +9,7 @@ module Network.FastIRC.Raw
       Message(..),
       -- * Parsing
       ircLines,
+      ircMessages,
       messageParser,
       parseMessage
     )
@@ -73,6 +74,22 @@ ircLines n _ = runIdentityP (loop B.empty B.empty)
     skipRest = skipWith (not . isSep) >=> skipLF
 
 {-# SPECIALIZE ircLines :: (Monad m) => Int -> () -> Pipe ProxyFast ByteString ByteString m r #-}
+
+
+-- | Turn a stream of IRC protocol lines into a stream of IRC messages.
+-- Invalid messages are silently ignored.
+--
+-- Note:  You cannot parse a raw packet stream with this proxy.  It must
+-- have been processed by 'ircLines'.
+
+ircMessages ::
+    (Monad m, Proxy p)
+    => () -> Pipe p ByteString Message m r
+ircMessages = runIdentityK loop
+    where
+    loop u =
+        parseMessage <$> request () >>=
+        maybe (loop u) (respond >=> loop)
 
 
 -- | Parser for a raw protocol message.
