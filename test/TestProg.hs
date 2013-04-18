@@ -1,9 +1,11 @@
 module Main where
 
-import Control.Proxy
+import qualified Data.ByteString.Char8 as Bc
 import Network.FastIRC.Raw
+import System.Environment
 
 
 main :: IO ()
 main =
-    runProxy (fromListS ["abc", "def\n", "ghi\n"] >-> ircLines 5 >-> printD)
+    getArgs >>=
+    mapM_ (print . parseMessage . Bc.pack)

@@ -10,19 +10,21 @@ module Network.FastIRC.Raw
       -- * Parsing
       ircLines,
       ircMessages,
-      messageParser,
-      parseMessage
+      parseMessage,
+      parseMessage'
     )
     where
 
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as Bl
+import qualified Data.ByteString.Lazy.Builder as Bb
 import Control.Applicative
 import Control.DeepSeq
-import Control.Monad.Writer
+import Control.Monad
 import Control.Proxy
-import Data.Attoparsec.ByteString as P
 import Data.ByteString (ByteString)
 import Data.Data
+import Data.Monoid
 import Data.Word
 
 
@@ -49,19 +51,20 @@ ircLines ::
     => Int  -- ^ Maximum line length (not including separators).
     -> ()
     -> Pipe p ByteString ByteString m r
-ircLines n _ = runIdentityP (loop B.empty B.empty)
+ircLines n _ = runIdentityP (loop 0 mempty B.empty)
     where
     isSep :: Word8 -> Bool
     isSep c = c == 10 || c == 13
 
-    loop s ds
-        | B.length s >= n  = respond (B.take n s) >> skipRest ds >>= loop B.empty
-        | B.null ds       = request () >>= loop s
-        | not (B.null sfx)  = respond (B.take n s') >> skipLF sfx >>= loop B.empty
-        | otherwise       = loop s' sfx
+    loop i s ds
+        | i >= n           = respond (final s) >> skipRest ds >>= loop 0 mempty
+        | B.null ds       = request () >>= loop i s
+        | not (B.null sfx)  = respond (final s') >> skipLF sfx >>= loop 0 mempty
+        | otherwise       = loop (i + B.length pfx) s' sfx
         where
         (pfx, sfx) = B.break isSep ds
-        s'         = B.append s pfx
+        s'         = s <> Bb.byteString pfx
+        final      = B.take n . Bl.toStrict . Bb.toLazyByteString
 
     skipWith :: (Word8 -> Bool) -> ByteString -> Pipe (IdentityP p) ByteString ByteString m ByteString
     skipWith f ds
@@ -80,7 +83,7 @@ ircLines n _ = runIdentityP (loop B.empty B.empty)
 -- Invalid messages are silently ignored.
 --
 -- Note:  You cannot parse a raw packet stream with this proxy.  It must
--- have been processed by 'ircLines'.
+-- have been processed by 'ircLines' first.
 
 ircMessages ::
     (Monad m, Proxy p)
@@ -88,43 +91,55 @@ ircMessages ::
 ircMessages = runIdentityK loop
     where
     loop u =
-        parseMessage <$> request () >>=
+        parseMessage' <$> request () >>=
         maybe (loop u) (respond >=> loop)
 
-
--- | Parser for a raw protocol message.
-
-messageParser :: Parser Message
-messageParser =
-    Message
-    <$> (prefix <* space <|> pure Nothing)
-    <*> command
-    <*> many arg
-
-    where
-    spaceChars = "\0\r\n "
-    lfChars    = "\0\r\n"
-
-    isLF     = inClass lfChars
-    isSpace  = inClass spaceChars
-    notSpace = notInClass spaceChars
-
-    space = satisfy isSpace *> skipWhile isSpace
-    token = takeWhile1 notSpace
-
-    prefix = word8 58 *> (Just <$> token)
-
-    command = token
-
-    arg = space *> (lastArg <|> regArg)
-        where
-        lastArg = word8 58 *> takeTill isLF
-        regArg  = token
+{-# SPECIALIZE ircMessages :: (Monad m) => () -> Pipe ProxyFast ByteString Message m r #-}
 
 
--- | Parse the given message.
+-- | Parse the given IRC message.  May not contain line delimiters or
+-- the NUL character.
 
 parseMessage :: ByteString -> Maybe Message
-parseMessage =
-    either (const Nothing) Just .
-    parseOnly messageParser
+parseMessage s = do
+    guard (B.notElem 10 s)
+    guard (B.notElem 13 s)
+    parseMessage' s
+
+
+-- | Like 'parseMessage', but does not check for line delimiters.
+
+parseMessage' :: ByteString -> Maybe Message
+parseMessage' =
+    evalStateT $ do
+        StateT $ \s -> do
+            guard (B.notElem 0 s)
+            Just ((), s)
+        Message <$> prefix <*> command <*> args
+
+    where
+    prefix =
+        StateT $ \s ->
+            case B.uncons s of
+              Just (58, s') -> do
+                  let (pfx, s'') = B.break (== 32) s'
+                  guard (not (B.null pfx))
+                  Just (Just pfx, B.dropWhile (== 32) s'')
+              _ -> Just (Nothing, s)
+
+    command =
+        StateT $ \s ->
+            case B.uncons s of
+              Just (c, _) | c /= 32 && c /= 58 ->
+                  let (pfx, s') = B.break (== 32) s
+                  in Just (pfx, B.dropWhile (== 32) s')
+              _ -> Nothing
+
+    args = StateT ((\as -> Just (as, B.empty)) . loop)
+        where
+        loop s
+            | B.null s = []
+            | Just (58, rest) <- B.uncons s = [rest]
+            | otherwise = arg : loop (B.dropWhile (== 32) s')
+            where
+            (arg, s') = B.break (== 32) s
