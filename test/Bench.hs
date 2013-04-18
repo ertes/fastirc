@@ -24,6 +24,13 @@ import Network.FastIRC.Raw
 import System.Random
 
 
+testMessage :: Message
+testMessage =
+    Message (Just "very!long@prefix")
+            "PRIVMSG"
+            ["#somechannel", "this is a not so long message, but it does it"]
+
+
 testSession :: [ByteString]
 testSession =
     take (10*2048) .
@@ -55,18 +62,24 @@ testSession =
 
 main :: IO ()
 main = do
-    let ts = testSession
-    ts `deepseq` defaultMain $
-        [ bgroup "raw" (raw ts) ]
+    let tm = testMessage
+        ts = testSession
+    tm `deepseq` ts `deepseq` defaultMain $
+        [ bgroup "raw" (raw tm ts) ]
 
     where
-    raw ts = [parseArgs, parseCmd, parseFull, parseSpc,
-              streamParse, streamSplit]
+    raw tm ts =
+        [parseArgs, parseCmd, parseFull, parseSpc,
+         printMsg,
+         streamParse, streamSplit]
+
         where
         parseArgs = bench "parse_args" (nf parseMessage "COMMAND ARG ARG ARG :LAST ARG")
         parseCmd  = bench "parse_cmd"  (nf parseMessage "COMMAND")
         parseFull = bench "parse_full" (nf parseMessage ":PREFIX COMMAND ARG ARG ARG :LAST ARG")
         parseSpc  = bench "parse_spc"  (nf parseMessage "C                                 ")
+
+        printMsg = bench "print" (nf printMessage tm)
 
         streamParse =
             bench "stream_parse_10M" $
