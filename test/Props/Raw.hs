@@ -2,6 +2,7 @@ module Props.Raw where
 
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as Bc
+import Blaze.ByteString.Builder
 import Control.Monad.Writer
 import Control.Proxy
 import Network.FastIRC.Raw
@@ -49,16 +50,16 @@ prop_parser_lastArg (ArgToken cmd) (map getArgToken . take 10 -> args) (LastArgT
 
 prop_print =
     once $
-    printMessage (Message Nothing "CMD" []) == "CMD\r\n" &&
-    printMessage (Message Nothing "CMD" ["X", "Y", "Z"]) == "CMD X Y Z\r\n" &&
-    printMessage (Message Nothing "CMD" ["A", "B C"]) == "CMD A :B C\r\n" &&
-    printMessage (Message Nothing "CMD" ["A", ":B"]) == "CMD A ::B\r\n" &&
-    printMessage (Message Nothing "CMD" ["A", ""]) == "CMD A :\r\n" &&
-    printMessage (Message (Just "PFX") "CMD" []) == ":PFX CMD\r\n" &&
-    printMessage (Message (Just "PFX") "CMD" ["X", "Y", "Z"]) == ":PFX CMD X Y Z\r\n" &&
-    printMessage (Message (Just "PFX") "CMD" ["A", "B C"]) == ":PFX CMD A :B C\r\n" &&
-    printMessage (Message (Just "PFX") "CMD" ["A", ":B"]) == ":PFX CMD A ::B\r\n" &&
-    printMessage (Message (Just "PFX") "CMD" ["A", ""]) == ":PFX CMD A :\r\n"
+    toByteString (fromMessage $ Message Nothing "CMD" []) == "CMD\r\n" &&
+    toByteString (fromMessage $ Message Nothing "CMD" ["X", "Y", "Z"]) == "CMD X Y Z\r\n" &&
+    toByteString (fromMessage $ Message Nothing "CMD" ["A", "B C"]) == "CMD A :B C\r\n" &&
+    toByteString (fromMessage $ Message Nothing "CMD" ["A", ":B"]) == "CMD A ::B\r\n" &&
+    toByteString (fromMessage $ Message Nothing "CMD" ["A", ""]) == "CMD A :\r\n" &&
+    toByteString (fromMessage $ Message (Just "PFX") "CMD" []) == ":PFX CMD\r\n" &&
+    toByteString (fromMessage $ Message (Just "PFX") "CMD" ["X", "Y", "Z"]) == ":PFX CMD X Y Z\r\n" &&
+    toByteString (fromMessage $ Message (Just "PFX") "CMD" ["A", "B C"]) == ":PFX CMD A :B C\r\n" &&
+    toByteString (fromMessage $ Message (Just "PFX") "CMD" ["A", ":B"]) == ":PFX CMD A ::B\r\n" &&
+    toByteString (fromMessage $ Message (Just "PFX") "CMD" ["A", ""]) == ":PFX CMD A :\r\n"
 
 
 rawTests = $(testGroupGenerator)

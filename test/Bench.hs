@@ -12,6 +12,7 @@ import qualified Crypto.Random.AESCtr as Rnd
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as Bc
 import qualified Data.ByteString.Lazy as Bl
+import Blaze.ByteString.Builder
 import Control.Applicative
 import Control.DeepSeq
 import Control.Monad.Identity
@@ -19,6 +20,7 @@ import Control.Monad.State.Strict
 import Control.Proxy ((>->), fromListS, runProxy, useD)
 import Criterion.Main
 import Data.ByteString (ByteString)
+import Data.Monoid
 import Data.List
 import Network.FastIRC.Raw
 import System.Random
@@ -64,7 +66,8 @@ main :: IO ()
 main = do
     let tm = testMessage
         ts = testSession
-    tm `deepseq` ts `deepseq` defaultMain $
+    defaultMain $
+        tm `deepseq` ts `deepseq`
         [ bgroup "raw" (raw tm ts) ]
 
     where
@@ -79,16 +82,26 @@ main = do
         parseFull = bench "parse_full" (nf parseMessage ":PREFIX COMMAND ARG ARG ARG :LAST ARG")
         parseSpc  = bench "parse_spc"  (nf parseMessage "C                                 ")
 
-        printMsg = bench "print" (nf printMessage tm)
+        printMsg =
+            bench "print" $
+            nf (toByteString .
+                mconcat .
+                replicate 100 .
+                fromMessage) tm
 
         streamParse =
             bench "stream_parse_10M" $
-                nf (\ts' ->
-                        runIdentity . runProxy $
-                        fromListS ts' >-> ircLines 512 >-> ircMessages >-> useD (\ln -> ln `seq` return ())) ts
+            nf (\ts' ->
+                    runIdentity . runProxy $
+                    fromListS ts' >->
+                    ircLines 512 >->
+                    ircMessages >->
+                    useD (\ln -> ln `seq` return ())) ts
 
         streamSplit =
             bench "stream_split_10M" $
-                nf (\ts' ->
-                        runIdentity . runProxy $
-                        fromListS ts' >-> ircLines 512 >-> useD (\ln -> ln `seq` return ())) ts
+            nf (\ts' ->
+                    runIdentity . runProxy $
+                    fromListS ts' >->
+                    ircLines 512 >->
+                    useD (\ln -> ln `seq` return ())) ts
