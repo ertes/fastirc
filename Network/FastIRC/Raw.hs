@@ -11,7 +11,8 @@ module Network.FastIRC.Raw
       ircLines,
       ircMessages,
       parseMessage,
-      parseMessage'
+      parseMessage',
+      printMessage
     )
     where
 
@@ -143,3 +144,30 @@ parseMessage' =
             | otherwise = arg : loop (B.dropWhile (== 32) s')
             where
             (arg, s') = B.break (== 32) s
+
+
+-- | Turn the given message into a protocol line including CRLF.
+
+printMessage :: Message -> ByteString
+printMessage msg =
+    Bl.toStrict . Bb.toLazyByteString $
+        maybe mempty pfx (msgPrefix msg) <>
+        Bb.byteString (msgCmd msg) <>
+        args (msgArgs msg) <>
+        Bb.word8 13 <>
+        Bb.word8 10
+
+    where
+    args [] = mempty
+    args [a] =
+        Bb.word8 32 <>
+        (if (B.null a || B.head a == 58 || B.elem 32 a)
+           then Bb.word8 58
+           else mempty) <>
+        Bb.byteString a
+    args (a:as) = Bb.word8 32 <> Bb.byteString a <> args as
+
+    pfx p =
+        Bb.word8 58 <>
+        Bb.byteString p <>
+        Bb.word8 32

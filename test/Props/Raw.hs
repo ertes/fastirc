@@ -8,7 +8,7 @@ import Network.FastIRC.Raw
 import Props.Types
 
 
-prop_ircLines_sample1 (map getLineToken -> lns) (Positive bl) (Positive n) =
+prop_ircLines (map getLineToken -> lns) (Positive bl) (Positive n) =
     let msgs    = zipWith B.snoc lns (cycle [10, 13])
         packets = takeWhile (not . B.null) .
                   map (B.take bl) .
@@ -45,6 +45,20 @@ prop_parser_lastArg (ArgToken cmd) (map getArgToken . take 10 -> args) (LastArgT
     where
     msg = Bc.unwords (cmd : args ++ [Bc.cons ':' larg])
     res = parseMessage msg
+
+
+prop_print =
+    once $
+    printMessage (Message Nothing "CMD" []) == "CMD\r\n" &&
+    printMessage (Message Nothing "CMD" ["X", "Y", "Z"]) == "CMD X Y Z\r\n" &&
+    printMessage (Message Nothing "CMD" ["A", "B C"]) == "CMD A :B C\r\n" &&
+    printMessage (Message Nothing "CMD" ["A", ":B"]) == "CMD A ::B\r\n" &&
+    printMessage (Message Nothing "CMD" ["A", ""]) == "CMD A :\r\n" &&
+    printMessage (Message (Just "PFX") "CMD" []) == ":PFX CMD\r\n" &&
+    printMessage (Message (Just "PFX") "CMD" ["X", "Y", "Z"]) == ":PFX CMD X Y Z\r\n" &&
+    printMessage (Message (Just "PFX") "CMD" ["A", "B C"]) == ":PFX CMD A :B C\r\n" &&
+    printMessage (Message (Just "PFX") "CMD" ["A", ":B"]) == ":PFX CMD A ::B\r\n" &&
+    printMessage (Message (Just "PFX") "CMD" ["A", ""]) == ":PFX CMD A :\r\n"
 
 
 rawTests = $(testGroupGenerator)
